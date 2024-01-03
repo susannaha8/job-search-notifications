@@ -38,7 +38,7 @@ def scrapeLinkedIn(excludedYears=[], excludedCompanies=[], excludedTitles=[]):
       
 	driver = webdriver.Chrome()
 	#driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()))
-	driver.get('https://www.linkedin.com/jobs/search?keywords=Software%20Engineer&location=Seattle%2C%20Washington%2C%20United%20States&locationId=&geoId=104116203&f_TPR=r86400&distance=25&position=1&pageNum=0')
+	driver.get('https://www.linkedin.com/jobs/search/?currentJobId=3792269702&distance=25&f_TPR=r86400&geoId=104116203&keywords=Software%20Engineer&location=Seattle%2C%20Washington%2C%20United%20States&origin=JOB_SEARCH_PAGE_JOB_FILTER&sortBy=DD')
 	#driver.get("https://www.selenium.dev/selenium/web/web-form.html")
 	driver.implicitly_wait(0.5)
 	jobList = []
@@ -50,6 +50,9 @@ def scrapeLinkedIn(excludedYears=[], excludedCompanies=[], excludedTitles=[]):
 		no_of_jobs = int(driver.find_element(By.CLASS_NAME, 'results-context-header__job-count').text.split(' ')[0])
 		print(no_of_jobs)
 
+		#get all the job posts
+		elements = driver.find_elements(by=By.XPATH, value="//div[@class='base-card relative w-full hover:no-underline focus:no-underline base-card--link base-search-card base-search-card--link job-search-card']")
+	
 		# #scroll to the bottom of the page
 		# scrolls = no_of_jobs/25 + 1
 		# while True:
@@ -59,54 +62,71 @@ def scrapeLinkedIn(excludedYears=[], excludedCompanies=[], excludedTitles=[]):
 		# 	if scrolls < 0:
 		# 		break
 
-		#get all the job posts
-		time.sleep(1)
-		elements = driver.find_elements(by=By.XPATH, value="//div[@class='base-card relative w-full hover:no-underline focus:no-underline base-card--link base-search-card base-search-card--link job-search-card']")
-		# show_more = driver.find_element(By.XPATH, "//button[@aria-label='Show more, visually expands previously read content above']")
-		# show_more.click()
-		# print(elements[0].text.split("\n"))
-		#all_text = driver.page_source
+	except Exception as e: #could not get results page
+		print(e)
+		return 
 
-		#content = driver.find_element(By.XPATH, "//div[@class='show-more-less-html__markup relative overflow-hidden']")
-		#print(content.text)
+	
+	#for testing, get single job
+	# show_more = driver.find_element(By.XPATH, "//button[@aria-label='Show more, visually expands previously read content above']")
+	# show_more.click()
+	# print(elements[0].text.split("\n"))
+	#all_text = driver.page_source
+	#content = driver.find_element(By.XPATH, "//div[@class='show-more-less-html__markup relative overflow-hidden']")
+	#print(content.text)
 
-		#for each job post, first check title and company, then check description for minimum experience
-		i = 0
-		for e in elements:
+	#for each job post
+	i = 0
+	for e in elements:
+		
+		try:
+			#print the element, check title and company
 			print("ELEMENT:" + str(i))
-			i = i + 1
-			time.sleep(5)
-			e.click()
 			print(e.text)
+			i = i + 1
 			info = e.text.split("\n")
 			if not checkInfo(excludedCompanies, excludedTitles, info):
 				continue
+
+			#click on the element
+			time.sleep(5)
+			e.click()
+			
+			#show more, check description
 			time.sleep(5)
 			show_more = driver.find_element(By.XPATH, "//button[@aria-label='Show more, visually expands previously read content above']")
 			show_more.click()
 			description = (driver.find_element(By.XPATH, "//div[@class='show-more-less-html__markup relative overflow-hidden']")).text
-			if (checkYears(excludedYears, description)):
-				print("job checked")
-				jobList.append({"title":info[1], "company":info[2], "location": info[3], "postDate":info[-1], "description":"", "applicationLink":""})
+			# if not checkYears(excludedYears, description):
+			# 	continue
+
+			print("job checked")
+
+			#get application link, add job to list
+			time.sleep(10)
+			apply = driver.find_element(By.XPATH, "//button[@class='sign-up-modal__outlet top-card-layout__cta mt-2 ml-1.5 h-auto babybear:flex-auto top-card-layout__cta--primary btn-md btn-primary']")
+			apply.click()
+
+			time.sleep(5)
+			external_site = driver.find_element(By.XPATH, "//a[@class='sign-up-modal__sign-up-later']")	
+			external_site.click()
+
+			time.sleep(5)
+			driver.switch_to.window(driver.window_handles[1])
+			url = driver.current_url
+			driver.close()
+			driver.switch_to.window(driver.window_handles[0])
+			new_job = {"title":info[1], "company":info[2], "location": info[3], "postDate":info[-1], "description":"", "applicationLink":url}
+			jobList.append(new_job)
+			print(new_job)
 		
-		print(jobList)
+		except Exception as e:
+			print(e) #this current job had issues
+			break
 
-	except Exception as e:
-        	print(e)
+	print(jobList)
 
-	# Parsing the HTML
-	#soup = BeautifulSoup(r.content, 'html.parser')
-	#print (soup)
 
-       
-
-       #res = soup.select('#global-nav')
-       #res = soup.find_all("div", class_="job-search-results-list")
-       
-
-	#job_list = soup.find("div", {"class": "authentication-outlet"}) 
-	#print(job_list) 
-	#content = job_list.find_all('li') 
 	
 
 if __name__ == "__main__":
@@ -115,3 +135,4 @@ if __name__ == "__main__":
       excludedTitles = ["Senior","Lead","Principle","III","Sr"]
       scrapeLinkedIn(excludedYears, excludedCompanies, excludedTitles) #change to pass in all args
 	
+
