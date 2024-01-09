@@ -8,6 +8,8 @@ import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import time
 
 # from selenium.webdriver.chrome.service import Service as ChromeService
@@ -17,6 +19,18 @@ import time
 def linkedinAPI():
     ret = requests.get("https://api.linkedin.com/v2/job-search") 
     return ret.json()
+
+#get any element: timeout after 15 seconds
+def wait(driver,value):
+	try:
+		print("WAITING " + value)
+		element = WebDriverWait(driver, 15).until(
+			EC.element_to_be_clickable((By.XPATH, value)))
+		return element
+	except Exception as e:
+		print(e)
+		return None
+	
 
 def checkInfo(excludedCompanies=[], excludedTitles=[], info=[]):
 	if (info[2] in excludedCompanies):
@@ -39,7 +53,6 @@ def scrapeLinkedIn(excludedYears=[], excludedCompanies=[], excludedTitles=[]):
 	driver = webdriver.Chrome()
 	#driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()))
 	driver.get('https://www.linkedin.com/jobs/search/?currentJobId=3792269702&distance=25&f_TPR=r86400&geoId=104116203&keywords=Software%20Engineer&location=Seattle%2C%20Washington%2C%20United%20States&origin=JOB_SEARCH_PAGE_JOB_FILTER&sortBy=DD')
-	#driver.get("https://www.selenium.dev/selenium/web/web-form.html")
 	driver.implicitly_wait(0.5)
 	jobList = []
 	print(driver.title)
@@ -66,14 +79,6 @@ def scrapeLinkedIn(excludedYears=[], excludedCompanies=[], excludedTitles=[]):
 		print(e)
 		return 
 
-	
-	#for testing, get single job
-	# show_more = driver.find_element(By.XPATH, "//button[@aria-label='Show more, visually expands previously read content above']")
-	# show_more.click()
-	# print(elements[0].text.split("\n"))
-	#all_text = driver.page_source
-	#content = driver.find_element(By.XPATH, "//div[@class='show-more-less-html__markup relative overflow-hidden']")
-	#print(content.text)
 
 	#for each job post
 	i = 0
@@ -89,26 +94,29 @@ def scrapeLinkedIn(excludedYears=[], excludedCompanies=[], excludedTitles=[]):
 				continue
 
 			#click on the element
-			time.sleep(5)
 			e.click()
 			
 			#show more, check description
-			time.sleep(5)
-			show_more = driver.find_element(By.XPATH, "//button[@aria-label='Show more, visually expands previously read content above']")
+			show_more = wait(driver, "//button[@aria-label='Show more, visually expands previously read content above']")
+			#show_more = driver.find_element(By.XPATH, "//button[@aria-label='Show more, visually expands previously read content above']")
 			show_more.click()
-			description = (driver.find_element(By.XPATH, "//div[@class='show-more-less-html__markup relative overflow-hidden']")).text
-			# if not checkYears(excludedYears, description):
-			# 	continue
+			
+			#description = (driver.find_element(By.XPATH, "//div[@class='show-more-less-html__markup relative overflow-hidden']")).text
+			description = wait(driver, "//div[@class='show-more-less-html__markup relative overflow-hidden']").text
+			if not checkYears(excludedYears, description):
+				continue
 
 			print("job checked")
 
 			#get application link, add job to list
-			time.sleep(10)
-			apply = driver.find_element(By.XPATH, "//button[@class='sign-up-modal__outlet top-card-layout__cta mt-2 ml-1.5 h-auto babybear:flex-auto top-card-layout__cta--primary btn-md btn-primary']")
+			#time.sleep(10)
+			#apply = driver.find_element(By.XPATH, "//button[@class='sign-up-modal__outlet top-card-layout__cta mt-2 ml-1.5 h-auto babybear:flex-auto top-card-layout__cta--primary btn-md btn-primary']")
+			apply = wait(driver, "//button[@class='sign-up-modal__outlet top-card-layout__cta mt-2 ml-1.5 h-auto babybear:flex-auto top-card-layout__cta--primary btn-md btn-primary']")
 			apply.click()
 
-			time.sleep(5)
-			external_site = driver.find_element(By.XPATH, "//a[@class='sign-up-modal__sign-up-later']")	
+			#time.sleep(5)
+			#external_site = driver.find_element(By.XPATH, "//a[@class='sign-up-modal__sign-up-later']")	
+			external_site = wait(driver, "//a[@class='sign-up-modal__sign-up-later']")
 			external_site.click()
 
 			time.sleep(5)
@@ -122,7 +130,7 @@ def scrapeLinkedIn(excludedYears=[], excludedCompanies=[], excludedTitles=[]):
 		
 		except Exception as e:
 			print(e) #this current job had issues
-			break
+			continue
 
 	print(jobList)
 
