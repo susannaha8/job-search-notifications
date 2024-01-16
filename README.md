@@ -1,3 +1,3 @@
 # job-search-notifications
 
-first: scrapes LinkedIn for a given job search query
+This script scrapes LinkedIn with more specific job search filters and puts the results in a Notion database.
